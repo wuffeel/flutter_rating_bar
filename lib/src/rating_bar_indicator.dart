@@ -73,12 +73,10 @@ class RatingBarIndicator extends StatefulWidget {
 class _RatingBarIndicatorState extends State<RatingBarIndicator> {
   late int _ratingNumber = widget.rating.truncate() + 1;
   late double _ratingFraction = widget.rating - _ratingNumber + 1;
-  bool _isRTL = false;
 
   @override
   Widget build(BuildContext context) {
     final textDirection = widget.textDirection ?? Directionality.of(context);
-    _isRTL = textDirection == TextDirection.rtl;
     _ratingNumber = widget.rating.truncate() + 1;
     _ratingFraction = widget.rating - _ratingNumber + 1;
     return SingleChildScrollView(
@@ -135,17 +133,7 @@ class _RatingBarIndicatorState extends State<RatingBarIndicator> {
                       : null,
             ),
             if (index + 1 == _ratingNumber) ...[
-              if (widget.clipFillStroke)
-                FittedBox(
-                  child: ClipRect(
-                    clipper: _IndicatorClipper(
-                      ratingFraction: _ratingFraction,
-                      rtlMode: _isRTL,
-                    ),
-                    child: widget.disabledStroke ?? widget.fillStroke,
-                  ),
-                )
-              else
+              if (!widget.clipFillStroke)
                 FittedBox(
                   child: widget.fillStroke,
                 ),
@@ -153,7 +141,6 @@ class _RatingBarIndicatorState extends State<RatingBarIndicator> {
                 child: ClipRect(
                   clipper: _IndicatorClipper(
                     ratingFraction: _ratingFraction,
-                    rtlMode: _isRTL,
                   ),
                   child: widget.filledItem,
                 ),
@@ -169,32 +156,22 @@ class _RatingBarIndicatorState extends State<RatingBarIndicator> {
 class _IndicatorClipper extends CustomClipper<Rect> {
   _IndicatorClipper({
     required this.ratingFraction,
-    this.rtlMode = false,
   });
 
   final double ratingFraction;
-  final bool rtlMode;
 
   @override
   Rect getClip(Size size) {
-    return rtlMode
-        ? Rect.fromLTRB(
-            size.width - size.width * ratingFraction,
-            0,
-            size.width,
-            size.height,
-          )
-        : Rect.fromLTRB(
-            0,
-            0,
-            size.width * ratingFraction,
-            size.height,
-          );
+    return Rect.fromLTRB(
+      0,
+      0,
+      size.width * ratingFraction,
+      size.height,
+    );
   }
 
   @override
   bool shouldReclip(_IndicatorClipper oldClipper) {
-    return ratingFraction != oldClipper.ratingFraction ||
-        rtlMode != oldClipper.rtlMode;
+    return ratingFraction != oldClipper.ratingFraction;
   }
 }
