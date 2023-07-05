@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 /// A widget to display rating as assigned using [rating] property.
 ///
@@ -9,7 +10,10 @@ import 'package:flutter/material.dart';
 class RatingBarIndicator extends StatefulWidget {
   const RatingBarIndicator({
     Key? key,
-    required this.itemBuilder,
+    required this.filledItem,
+    required this.fillStroke,
+    this.disabledStroke,
+    this.clipFillStroke = false,
     this.textDirection,
     this.unratedColor,
     this.direction = Axis.horizontal,
@@ -20,8 +24,19 @@ class RatingBarIndicator extends StatefulWidget {
     this.rating = 0.0,
   }) : super(key: key);
 
-  /// {@macro flutterRatingBar.itemBuilder}
-  final IndexedWidgetBuilder itemBuilder;
+  /// Filled svg item that for full number rating
+  final SvgPicture filledItem;
+
+  /// Filled svg item stroke to wrap [filledItem]
+  final SvgPicture fillStroke;
+
+  /// Stroke that shows unfilled rating. If not provided, [fillStroke] will be
+  /// used
+  final SvgPicture? disabledStroke;
+
+  /// Whether filledItem with not full rating should be stroked with
+  /// [fillStroke] or with clipped [disabledStroke]
+  final bool clipFillStroke;
 
   /// {@macro flutterRatingBar.textDirection}
   final TextDirection? textDirection;
@@ -56,16 +71,9 @@ class RatingBarIndicator extends StatefulWidget {
 }
 
 class _RatingBarIndicatorState extends State<RatingBarIndicator> {
-  double _ratingFraction = 0;
-  int _ratingNumber = 0;
+  late int _ratingNumber = widget.rating.truncate() + 1;
+  late double _ratingFraction = widget.rating - _ratingNumber + 1;
   bool _isRTL = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _ratingNumber = widget.rating.truncate() + 1;
-    _ratingFraction = widget.rating - _ratingNumber + 1;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -121,35 +129,36 @@ class _RatingBarIndicatorState extends State<RatingBarIndicator> {
           children: [
             FittedBox(
               child: index + 1 < _ratingNumber
-                  ? widget.itemBuilder(context, index)
-                  : ColorFiltered(
-                      colorFilter: ColorFilter.mode(
-                        widget.unratedColor ?? Theme.of(context).disabledColor,
-                        BlendMode.srcIn,
-                      ),
-                      child: widget.itemBuilder(context, index),
-                    ),
+                  ? widget.filledItem
+                  : index + 1 != _ratingNumber || widget.clipFillStroke
+                      ? widget.disabledStroke ?? widget.fillStroke
+                      : null,
             ),
-            if (index + 1 == _ratingNumber)
-              if (_isRTL)
+            if (index + 1 == _ratingNumber) ...[
+              if (widget.clipFillStroke)
                 FittedBox(
                   child: ClipRect(
                     clipper: _IndicatorClipper(
                       ratingFraction: _ratingFraction,
                       rtlMode: _isRTL,
                     ),
-                    child: widget.itemBuilder(context, index),
+                    child: widget.disabledStroke ?? widget.fillStroke,
                   ),
                 )
               else
                 FittedBox(
-                  child: ClipRect(
-                    clipper: _IndicatorClipper(
-                      ratingFraction: _ratingFraction,
-                    ),
-                    child: widget.itemBuilder(context, index),
-                  ),
+                  child: widget.fillStroke,
                 ),
+              FittedBox(
+                child: ClipRect(
+                  clipper: _IndicatorClipper(
+                    ratingFraction: _ratingFraction,
+                    rtlMode: _isRTL,
+                  ),
+                  child: widget.filledItem,
+                ),
+              ),
+            ]
           ],
         ),
       ),
